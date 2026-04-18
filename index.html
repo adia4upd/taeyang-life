@@ -1250,10 +1250,11 @@ function importMemberCSV(evt){
     if(lines.length<2){alert('데이터 없음');return;}
     const hdr=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
     const ci=name=>hdr.findIndex(h=>h.includes(name));
-    const iRefNo=ci('추천사원번호'),iRefCode=ci('추천사원 코드')<0?ci('추천사원코드'):ci('추천사원 코드');
-    const iName=ci('가입사원명'),iCode=ci('가입사원 코드')<0?ci('가입사원코드'):ci('가입사원 코드');
-    const iRank=ci('직위'),iTeam=ci('소속'),iSsn=ci('주민'),iBank=ci('은행명'),iBankCode=ci('은행코드'),iBankNum=ci('계좌'),iPhone=ci('핸드폰');
-    const rankMap={'영업 사원':'사원','사원':'사원','팀장':'팀장','지사':'지사','본부장':'본부장','지점장':'지사','대표자':'본부장','소장':'본부장'};
+    const iRefNo=ci('추천인사원번호')>=0?ci('추천인사원번호'):(ci('추천사원번호')>=0?ci('추천사원번호'):ci('추천사원 코드'));
+    const iRefName=ci('추천인이름')>=0?ci('추천인이름'):ci('추천사원 코드');
+    const iName=ci('가입사원명'),iCode=ci('가입사원코드')>=0?ci('가입사원코드'):ci('가입사원 코드');
+    const iRank=ci('직급')>=0?ci('직급'):ci('직위'),iTeam=ci('소속'),iSsn=ci('주민'),iBank=ci('은행명'),iBankCode=ci('은행코드'),iBankNum=ci('계좌'),iPhone=ci('핸드폰');
+    const rankMap={'사원':'사원','영업 사원':'사원','팀장':'팀장','지사':'지사','본부장':'본부장','지점장':'지사','대표자':'본부장','소장':'본부장','지사장':'지사'};
     let added=0,updated=0,skipped=0,warn=[];
     const rows=[];
     // 1패스: 모든 멤버 먼저 등록 (추천인 없이)
@@ -1270,7 +1271,7 @@ function importMemberCSV(evt){
         ssn:g(iSsn),bank:g(iBank),bankCode:g(iBankCode),bankNum:g(iBankNum),phone:g(iPhone)};
       if(existing){Object.assign(existing,data);updated++;}
       else{members.push({id:uid(),...data,pw:'1234',createdAt:Date.now()});added++;}
-      rows.push({i,name,code,refCode:g(iRefCode),refName:g(iRefNo)});
+      rows.push({i,name,code,refCode:g(iRefNo),refName:g(iRefName)});
     }
     // 2패스: 추천인 연결
     for(const {i,name,code,refCode,refName} of rows){
@@ -1290,10 +1291,12 @@ function importMemberCSV(evt){
 
 function downloadMemberTemplate(){
   const rows=[
-    ['추천사원번호','추천사원 코드','가입사원명','가입사원 코드','직위','소속','주민등록번호','은행명','은행코드','계좌번호','핸드폰'],
-    ['김요셉','TYS250920001','임난경','TYS251025005','영업 사원','플라이','690810-2067217','국민은행','004','7607-01042-93455','010-2208-7362'],
+    ['추천인사원번호','추천인이름','가입사원명','가입사원코드','직급(사원/팀장/지사/본부장)','소속','주민등록번호','은행명','은행코드','계좌번호','핸드폰'],
+    ['TYS250920001','김요셉','임난경','TYS251025005','사원','서울지사','690810-2067217','국민은행','004','760701042934550','010-2208-7362'],
+    ['','','홍길동','TYS251101001','팀장','부산지사','800101-1234567','신한은행','088','110123456789','010-1234-5678'],
+    ['','본사','박지사','TYS241201001','지사','대구지사','750515-2345678','하나은행','081','123456789012','010-9876-5432'],
   ];
-  const csv=rows.map(r=>r.join(',')).join('\n');
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='태양라이프_사원등록양식.csv';a.click();
 }
