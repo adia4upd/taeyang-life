@@ -163,13 +163,9 @@ tr:hover td { background:#fafafa; }
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <div class="emoji">☀️</div>
+      <div class="emoji" id="logo-tap" onclick="tapLogo()" style="cursor:default;user-select:none">☀️</div>
       <h1>태양라이프 정산</h1>
       <p>사원번호와 비밀번호로 로그인하세요</p>
-    </div>
-    <div class="login-tabs">
-      <div class="login-tab active" onclick="switchLoginTab('member')">멤버 로그인</div>
-      <div class="login-tab" onclick="switchLoginTab('admin')">관리자 로그인</div>
     </div>
 
     <!-- 멤버 로그인 -->
@@ -186,7 +182,7 @@ tr:hover td { background:#fafafa; }
       <button class="btn btn-primary btn-full" onclick="doLogin()">로그인</button>
     </div>
 
-    <!-- 관리자 로그인 -->
+    <!-- 관리자 로그인 (숨김) -->
     <div id="lt-admin" style="display:none">
       <div class="form-group">
         <label>관리자 비밀번호</label>
@@ -194,6 +190,7 @@ tr:hover td { background:#fafafa; }
       </div>
       <p id="li-adm-err" style="color:var(--red);font-size:.8rem;min-height:18px"></p>
       <button class="btn btn-primary btn-full" onclick="doAdminLogin()">관리자 로그인</button>
+      <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="hidAdminBox()">취소</button>
     </div>
   </div>
 </div>
@@ -469,10 +466,23 @@ function calcComm(registrantId){
 }
 
 /* ════════════════ LOGIN ════════════════ */
-function switchLoginTab(t){
-  document.getElementById('lt-member').style.display=t==='member'?'':'none';
-  document.getElementById('lt-admin').style.display=t==='admin'?'':'none';
-  document.querySelectorAll('.login-tab').forEach((el,i)=>el.classList.toggle('active',(i===0&&t==='member')||(i===1&&t==='admin')));
+let _tapCount=0, _tapTimer=null;
+function tapLogo(){
+  _tapCount++;
+  clearTimeout(_tapTimer);
+  _tapTimer=setTimeout(()=>{ _tapCount=0; },1500);
+  if(_tapCount>=5){
+    _tapCount=0;
+    document.getElementById('lt-member').style.display='none';
+    document.getElementById('lt-admin').style.display='';
+    document.getElementById('li-adm-pw').focus();
+  }
+}
+function hidAdminBox(){
+  document.getElementById('lt-admin').style.display='none';
+  document.getElementById('lt-member').style.display='';
+  document.getElementById('li-adm-pw').value='';
+  document.getElementById('li-adm-err').textContent='';
 }
 
 function doLogin(){
