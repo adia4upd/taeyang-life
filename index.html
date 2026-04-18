@@ -448,6 +448,17 @@ function parseContractDate(code){
 }
 function getWeekMon(ds){const d=new Date(ds+'T00:00:00'),day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));return d;}
 function getPaySat(ds){const m=getWeekMon(ds);m.setDate(m.getDate()+19);return m;}
+// 월급 정산기간: 전월26일~당월25일 → 다음달 말일 지급
+function getMonthPeriodInfo(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  let py=d.getFullYear(),pm=d.getMonth()+1;
+  if(d.getDate()>=26){pm++;if(pm>12){pm=1;py++;}}
+  const payY=pm===12?py+1:py, payM=pm===12?1:pm+1;
+  const payDate=new Date(payY,payM,0); // 다음달 말일
+  const periodKey=`${py}-${String(pm).padStart(2,'0')}`;
+  const prevM=pm===1?12:pm-1, prevY=pm===1?py-1:py;
+  return{periodKey,payDate,prevM,prevY,py,pm};
+}
 const toStr  =d=>d.toISOString().slice(0,10);
 const fmtDate=s=>s?new Date(s+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric'}):'-';
 const fmtFull=d=>d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
@@ -657,20 +668,30 @@ function renderMyPage(){
       }).join('')+'</div>';
     }
   } else {
-    // 월급 현황
+    // 월급 현황 (26일~25일 기준)
     html+=`<div class="card"><div class="card-title-lg">💰 내 월급 현황</div>`;
-    const months=[];
-    for(let i=0;i<3;i++){const d=new Date(y,mo-1-i,1);months.push({y:d.getFullYear(),m:d.getMonth()+1});}
-    months.forEach(({y:my,m:mm})=>{
-      let total=0, cnt=0;
+    // 최근 3개 정산기간
+    const periods=[];
+    {const n=new Date();let py=n.getFullYear(),pm=n.getMonth()+1;
+    if(n.getDate()>=26){pm++;if(pm>12){pm=1;py++;}}
+    for(let i=0;i<3;i++){periods.push(`${py}-${String(pm).padStart(2,'0')}`);pm--;if(pm<1){pm=12;py--;}}
+    }
+    periods.forEach(pk=>{
+      const[py,pm]=[parseInt(pk.slice(0,4)),parseInt(pk.slice(5))];
+      const prevM=pm===1?12:pm-1,prevY=pm===1?py-1:py;
+      const payY=pm===12?py+1:py,payM=pm===12?1:pm+1;
+      const payDate=new Date(payY,payM,0);
+      const diff=Math.floor((payDate-now)/86400000);
+      const stLabel=diff<0?'완료':diff<=3?`D-${diff} 예정`:`D-${diff}`;
+      const stColor=diff<0?'var(--green)':diff<=3?'var(--red)':'var(--muted)';
+      let total=0,cnt=0;
       contracts.forEach(c=>{
         const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
-        const dd=new Date(jd+'T00:00:00');
-        if(dd.getFullYear()!==my||dd.getMonth()+1!==mm) return;
+        if(getMonthPeriodInfo(jd).periodKey!==pk) return;
         const comms=calcComm(c.registrantId);
-        total+=(comms[m.id]||0); if(comms[m.id]) cnt++;
+        total+=(comms[m.id]||0);if(comms[m.id]) cnt++;
       });
-      html+=`<div class="row"><span style="font-weight:700">${my}년 ${mm}월</span><div style="text-align:right"><span class="amt">${won(total)}</span><span class="txt-m" style="margin-left:8px">${cnt}건</span></div></div>`;
+      html+=`<div class="row" style="padding:12px 0"><div><div style="font-weight:700;font-size:.88rem">${prevY}년 ${prevM}월 26일 ~ ${py}년 ${pm}월 25일</div><div style="font-size:.76rem;color:${stColor};margin-top:2px">${payY}년 ${payM}월 ${payDate.getDate()}일 지급 · ${stLabel}</div></div><div style="text-align:right"><span class="amt">${won(total)}</span><div class="txt-m">${cnt}건</div></div></div>`;
     });
     html+=`</div>`;
 
@@ -920,18 +941,39 @@ function renderAdmWeekly(){
 
 function renderAdmMonthly(){
   const picker=document.getElementById('mon-picker');
-  if(!picker.value){const n=new Date();picker.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
+  if(!picker.value){
+    const n=new Date();let py=n.getFullYear(),pm=n.getMonth()+1;
+    if(n.getDate()>=26){pm++;if(pm>12){pm=1;py++;}}
+    picker.value=`${py}-${String(pm).padStart(2,'0')}`;
+  }
   const[y,mo]=picker.value.split('-').map(Number);
   const data={};
   contracts.forEach(c=>{
     const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
-    const dd=new Date(jd+'T00:00:00');if(dd.getFullYear()!==y||dd.getMonth()+1!==mo) return;
+    const{periodKey}=getMonthPeriodInfo(jd);
+    if(periodKey!==picker.value) return;
     const comms=calcComm(c.registrantId);
     Object.entries(comms).forEach(([mid,amt])=>{const m=byId(mid);if(!m||m.rank==='사원') return;if(!data[mid]) data[mid]={m,total:0,cnt:0};data[mid].total+=amt;data[mid].cnt++;});
   });
   const rows=Object.values(data).sort((a,b)=>RANKS.indexOf(b.m.rank)-RANKS.indexOf(a.m.rank));
   const grand=rows.reduce((s,d)=>s+d.total,0);
-  document.getElementById('mon-content').innerHTML=`<div class="card"><div class="flex-between mb-10"><span style="font-weight:800">${y}년 ${mo}월</span><span class="amt" style="font-size:1.1rem">합계 ${won(grand)}</span></div>${rows.length?rows.map(d=>`<div class="row" style="padding:12px 14px"><div class="flex"><span class="badge badge-${d.m.rank}">${d.m.rank}</span><strong>${d.m.name}</strong><span class="mem-num">${d.m.no||''}</span><span class="txt-m">${d.m.team||''}</span></div><div style="text-align:right"><div class="amt">${won(d.total)}</div><div class="txt-m">${d.cnt}건</div></div></div>`).join(''):'<div class="empty">데이터 없음</div>'}</div>`;
+  const prevM=mo===1?12:mo-1,prevY=mo===1?y-1:y;
+  const payY=mo===12?y+1:y,payM=mo===12?1:mo+1;
+  const payDate=new Date(payY,payM,0);
+  const now=new Date();now.setHours(0,0,0,0);
+  const diff=Math.floor((payDate-now)/86400000);
+  const stLabel=diff<0?'지급완료':diff<=3?`D-${diff} 예정`:`D-${diff}`;
+  const stColor=diff<0?'var(--green)':diff<=3?'var(--red)':'var(--muted)';
+  const periodStr=`${prevY}년 ${prevM}월 26일 ~ ${y}년 ${mo}월 25일`;
+  const payStr=`${payY}년 ${payM}월 ${payDate.getDate()}일 지급`;
+  document.getElementById('mon-content').innerHTML=`<div class="card">
+    <div style="margin-bottom:12px">
+      <div style="font-weight:800">${periodStr}</div>
+      <div style="font-size:.82rem;margin-top:3px"><span style="color:var(--muted)">${payStr}</span> <span style="font-weight:700;color:${stColor}">${stLabel}</span></div>
+    </div>
+    <div class="flex-between mb-10"><span style="font-weight:700">합계</span><span class="amt" style="font-size:1.1rem">${won(grand)}</span></div>
+    ${rows.length?rows.map(d=>`<div class="row" style="padding:12px 14px"><div class="flex"><span class="badge badge-${d.m.rank}">${d.m.rank}</span><strong>${d.m.name}</strong><span class="mem-num">${d.m.no||''}</span><span class="txt-m">${d.m.team||''}</span></div><div style="text-align:right"><div class="amt">${won(d.total)}</div><div class="txt-m">${d.cnt}건${d.m.bankNum?` | ${d.m.bank||''} ${d.m.bankNum}`:''}</div></div></div>`).join(''):'<div class="empty">데이터 없음</div>'}
+  </div>`;
 }
 
 /* ════════════════ MODALS ════════════════ */
