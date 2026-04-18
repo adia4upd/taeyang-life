@@ -996,13 +996,10 @@ function importCSV(evt){
       const team=(iTeam>=0?cols[iTeam]:'').trim();
       if(!code||!rName){skipped++;continue;}
       if(contracts.find(c=>c.code===code)){skipped++;continue;}
-      // 사원번호 우선 매칭 → 없으면 이름 매칭
-      let mem=rNo?byNo(rNo):null;
-      if(!mem&&rNo){warn.push(`${i+1}행: 사원번호 ${rNo}(${rName}) 미등록 — 신규 추가`);
-        const jd=parseContractDate(code)||today();mem={id:uid(),name:rName,no:rNo,rank:'사원',parentId:null,team,joinDate:jd,createdAt:Date.now()};members.push(mem);}
-      if(!mem) mem=byName(rName);
-      if(!mem){const jd=parseContractDate(code)||today();mem={id:uid(),name:rName,no:genMemberNo(jd),rank:'사원',parentId:null,team,joinDate:jd,createdAt:Date.now()};members.push(mem);}
-      contracts.push({id:uid(),code,registrantId:mem.id,registrantName:rName,customerName:cName,type:'고객가입',joinDate:parseContractDate(code),note:'',createdAt:Date.now()});
+      // 사원번호 우선 매칭 → 없으면 이름 매칭 → 미등록이면 건너뜀
+      let mem=rNo?byNo(rNo):byName(rName);
+      if(!mem){warn.push(`${i+1}행: ${rNo?rNo+' ':''}${rName} — 미등록 사원, 건너뜀`);skipped++;continue;}
+      contracts.push({id:uid(),code,registrantId:mem.id,registrantName:mem.name,customerName:cName,type:'고객가입',joinDate:parseContractDate(code),note:'',createdAt:Date.now()});
       added++;
     }
     saveM();saveC();renderAdmContracts();renderAdmOrg();renderAdmDash();
