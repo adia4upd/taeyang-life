@@ -834,7 +834,7 @@ function renderTeamPage(){
     html+=mySawen.length?mySawen.map(s=>memberCard(s)).join(''):'<div class="empty">소속 사원 없음</div>';
 
   } else if(m.rank==='지사'){
-    html+=`<div style="text-align:right;margin-bottom:8px"><button class="btn btn-outline btn-sm" onclick="downloadOrgExcel('${m.id}')">📥 조직 명단 엑셀</button></div>`;
+    html+=`<div style="text-align:right;margin-bottom:8px;display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-outline btn-sm" onclick="downloadOrgExcel('${m.id}')">📥 조직 명단 엑셀</button><button class="btn btn-outline btn-sm" onclick="downloadCommExcel('${m.id}')">💰 수당 정산 엑셀</button></div>`;
     // 직속 팀장들
     const myTeamLeaders=members.filter(x=>x.parentId===m.id&&x.rank==='팀장');
     html+=`<div class="section-hdr gold">🏅 소속 팀장 현황 (${myTeamLeaders.length}명)</div>`;
@@ -846,7 +846,7 @@ function renderTeamPage(){
         return getMonthPeriodInfo(jd).periodKey===tlCurPk&&(c.registrantId===tl.id||tlSawen.some(s=>s.id===c.registrantId));
       });
       let tlComm=0; tlCons.forEach(c=>{const comms=calcComm(c.registrantId);tlComm+=(comms[tl.id]||0);});
-      const tlInfo=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.76rem;color:#555"><div>📞 ${tl.phone||'-'}</div><div>🏦 ${tl.bank||'-'}</div><div style="grid-column:1/-1">💳 ${tl.bankNum||'-'}</div><div style="grid-column:1/-1">🪪 ${tl.ssn||'-'}</div></div>`;
+      const tlInfo=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.76rem;color:#555"><div><span style="color:#999">전화번호</span><br>${tl.phone||'-'}</div><div><span style="color:#999">은행명</span><br>${tl.bank||'-'}</div><div><span style="color:#999">계좌번호</span><br>${tl.bankNum||'-'}</div><div><span style="color:#999">주민번호</span><br>${tl.ssn||'-'}</div></div>`;
       let subsect=tlSawen.length?`<div style="margin-left:16px;margin-top:8px">`+tlSawen.map(s=>memberCard(s,true)).join('')+`</div>`:'';
       return`<div class="card"><div class="flex-between mb-10"><div class="flex"><span class="badge badge-팀장">팀장</span><strong>${tl.name}</strong><span class="mem-num">${tl.no||''}</span></div><div style="text-align:right"><span class="amt">${won(tlComm)}</span><span class="txt-m" style="margin-left:6px">이번 기간</span></div></div>${tlInfo}${subsect}</div>`;
     }).join(''):'<div class="empty">소속 팀장 없음</div>';
@@ -870,7 +870,7 @@ function renderTeamPage(){
     const myTL=members.filter(x=>x.parentId===m.id&&x.rank==='팀장');
     const mySawen=members.filter(x=>x.parentId===m.id&&x.rank==='사원');
 
-    html=`<div style="text-align:right;margin-bottom:8px"><button class="btn btn-outline btn-sm" onclick="downloadOrgExcel('${m.id}')">📥 조직 명단 엑셀</button></div>
+    html=`<div style="text-align:right;margin-bottom:8px;display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-outline btn-sm" onclick="downloadOrgExcel('${m.id}')">📥 조직 명단 엑셀</button><button class="btn btn-outline btn-sm" onclick="downloadCommExcel('${m.id}')">💰 수당 정산 엑셀</button></div>
     <div class="stats">
       <div class="stat"><div class="n">${myJisa.length}</div><div class="l">소속 지사</div></div>
       <div class="stat"><div class="n">${allDown.filter(x=>x.rank==='팀장').length}</div><div class="l">소속 팀장</div></div>
@@ -887,7 +887,7 @@ function renderTeamPage(){
         const jisaCons=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPeriod&&allIds.includes(c.registrantId);});
         let jisaComm=0; jisaCons.forEach(c=>{const comms=calcComm(c.registrantId);jisaComm+=(comms[jisa.id]||0);});
         const tls=members.filter(x=>x.parentId===jisa.id&&x.rank==='팀장');
-        const jisaInfo=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.76rem;color:#555"><div>📞 ${jisa.phone||'-'}</div><div>🏦 ${jisa.bank||'-'}</div><div style="grid-column:1/-1">💳 ${jisa.bankNum||'-'}</div><div style="grid-column:1/-1">🪪 ${jisa.ssn||'-'}</div></div>`;
+        const jisaInfo=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.76rem;color:#555"><div><span style="color:#999">전화번호</span><br>${jisa.phone||'-'}</div><div><span style="color:#999">은행명</span><br>${jisa.bank||'-'}</div><div><span style="color:#999">계좌번호</span><br>${jisa.bankNum||'-'}</div><div><span style="color:#999">주민번호</span><br>${jisa.ssn||'-'}</div></div>`;
         return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-지사">지사</span><strong>${jisa.name}</strong><span class="mem-num">${jisa.no||''}</span></div><div style="text-align:right"><span class="amt">${won(jisaComm)}</span><div class="txt-m">팀장 ${tls.length}명 | 사원 ${jisaDown.filter(x=>x.rank==='사원').length}명</div></div></div>${jisaInfo}</div>`;
       }).join('');
     }
@@ -899,7 +899,7 @@ function renderTeamPage(){
         const tlSawen=members.filter(x=>x.parentId===tl.id&&x.rank==='사원');
         const tlCons=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPeriod&&(c.registrantId===tl.id||tlSawen.some(s=>s.id===c.registrantId));});
         let tlComm=0; tlCons.forEach(c=>{const comms=calcComm(c.registrantId);tlComm+=(comms[tl.id]||0);});
-        const tlInfo2=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.76rem;color:#555"><div>📞 ${tl.phone||'-'}</div><div>🏦 ${tl.bank||'-'}</div><div style="grid-column:1/-1">💳 ${tl.bankNum||'-'}</div><div style="grid-column:1/-1">🪪 ${tl.ssn||'-'}</div></div>`;
+        const tlInfo2=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.76rem;color:#555"><div><span style="color:#999">전화번호</span><br>${tl.phone||'-'}</div><div><span style="color:#999">은행명</span><br>${tl.bank||'-'}</div><div><span style="color:#999">계좌번호</span><br>${tl.bankNum||'-'}</div><div><span style="color:#999">주민번호</span><br>${tl.ssn||'-'}</div></div>`;
         return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-팀장">팀장</span><strong>${tl.name}</strong><span class="mem-num">${tl.no||''}</span></div><div style="text-align:right"><span class="amt">${won(tlComm)}</span><div class="txt-m">사원 ${tlSawen.length}명</div></div></div>${tlInfo2}</div>`;
       }).join('');
     }
@@ -930,10 +930,10 @@ function memberCard(s,showInfo=false){
   });
   const unpaidTotal=unpaid.reduce((sum,c)=>{const comms=calcComm(c.registrantId);return sum+(comms[c.registrantId]||0);},0);
   const infoHtml=showInfo?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.76rem;color:#555">
-    <div>📞 ${s.phone||'-'}</div>
-    <div>🏦 ${s.bank||'-'}</div>
-    <div style="grid-column:1/-1">💳 ${s.bankNum||'-'}</div>
-    <div style="grid-column:1/-1">🪪 ${s.ssn||'-'}</div>
+    <div><span style="color:#999">전화번호</span><br>${s.phone||'-'}</div>
+    <div><span style="color:#999">은행명</span><br>${s.bank||'-'}</div>
+    <div><span style="color:#999">계좌번호</span><br>${s.bankNum||'-'}</div>
+    <div><span style="color:#999">주민번호</span><br>${s.ssn||'-'}</div>
   </div>`:'';
   return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-${s.rank||'사원'}">${s.rank||'사원'}</span><strong>${s.name}</strong><span class="mem-num">${s.no||''}</span></div><div style="text-align:right"><span class="txt-m">이번 기간 ${sCons.length}건</span>${unpaid.length?`<br><span class="badge badge-preview">미지급 ${won(unpaidTotal)}</span>`:`<br><span class="txt-m">미지급 없음</span>`}</div></div>${infoHtml}</div>`;
 }
@@ -1372,6 +1372,28 @@ function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line
 
 function exportData(){const blob=new Blob([JSON.stringify({members,contracts,paid:[...paid],at:new Date().toISOString()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`taeyang-${today()}.json`;a.click();}
 function importData(evt){const file=evt.target.files[0];if(!file) return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!confirm(`덮어씌웁니다.\n멤버:${d.members?.length||0} 계약:${d.contracts?.length||0}`)) return;members=d.members||[];contracts=d.contracts||[];paid=new Set(d.paid||[]);saveM();saveC();saveP();renderAdmDash();alert('완료');}catch(err){alert('파일 오류: '+err.message);}};r.readAsText(file);evt.target.value='';}
+function downloadCommExcel(rootId){
+  const root=byId(rootId);
+  const down=getDownline(rootId);
+  const list=[root,...down].filter(Boolean);
+  const curPk=getMonthPeriodInfo(today()).periodKey;
+  const rows=[['직급','이름','사원번호','전화번호','은행명','계좌번호','주민번호','이번기간 수당(원)','계약건수']];
+  list.forEach(x=>{
+    let comm=0,cnt=0;
+    contracts.forEach(c=>{
+      const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
+      if(getMonthPeriodInfo(jd).periodKey!==curPk) return;
+      const comms=calcComm(c.registrantId);
+      if(comms[x.id]){comm+=comms[x.id];cnt++;}
+    });
+    rows.push([x.rank,x.name,x.no||'',x.phone||'',x.bank||'',x.bankNum||'',x.ssn||'',comm,cnt]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`수당정산_${root?.name||''}_${today()}.csv`;a.click();
+}
+
 function downloadOrgExcel(rootId){
   const root=byId(rootId);
   const down=getDownline(rootId);
