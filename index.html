@@ -934,13 +934,17 @@ function memberCard(s,showInfo=false){
     const{status}=getPayInfo(c);return status==='preview'||status==='overdue';
   });
   const unpaidTotal=unpaid.reduce((sum,c)=>{const comms=calcComm(c.registrantId,cBaseAmt(c));return sum+(comms[c.registrantId]||0);},0);
+  // 가장 빠른 미지급 지급예정일
+  const payDates=unpaid.map(c=>{const jd=c.joinDate||parseContractDate(c.code);return jd?getPaySat(jd):null;}).filter(Boolean);
+  const nextPay=payDates.length?payDates.sort((a,b)=>a-b)[0]:null;
+  const payLabel=nextPay?`<div style="font-size:.72rem;color:var(--muted);margin-top:2px">지급예정 ${fmtFull(nextPay)}</div>`:'';
   const infoHtml=showInfo?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.76rem;color:#555">
     <div><span style="color:#999">전화번호</span><br>${s.phone||'-'}</div>
     <div><span style="color:#999">은행명</span><br>${s.bank||'-'}</div>
     <div><span style="color:#999">계좌번호</span><br>${s.bankNum||'-'}</div>
     <div><span style="color:#999">주민번호</span><br>${s.ssn||'-'}</div>
   </div>`:'';
-  return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-${s.rank||'사원'}">${s.rank||'사원'}</span><strong>${s.name}</strong><span class="mem-num">${s.no||''}</span></div><div style="text-align:right"><span class="txt-m">이번 기간 ${sCons.length}건</span>${unpaid.length?`<br><span class="badge badge-preview">미지급 ${won(unpaidTotal)}</span>`:`<br><span class="txt-m">미지급 없음</span>`}</div></div>${infoHtml}</div>`;
+  return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-${s.rank||'사원'}">${s.rank||'사원'}</span><strong>${s.name}</strong><span class="mem-num">${s.no||''}</span></div><div style="text-align:right"><span class="txt-m">이번 기간 ${sCons.length}건</span>${unpaid.length?`<br><span class="badge badge-preview">미지급 ${won(unpaidTotal)}</span>${payLabel}`:`<br><span class="txt-m">미지급 없음</span>`}</div></div>${infoHtml}</div>`;
 }
 
 /* ════════════════ ADMIN RENDERS ════════════════ */
