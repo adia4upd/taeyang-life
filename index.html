@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>태양라이프 정산</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 :root {
@@ -13,6 +15,7 @@
   --border:#e5e7eb; --green:#10b981; --red:#ef4444; --blue:#3b82f6; --r:12px;
 }
 body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── LOGIN ── */
 #login-screen {
@@ -404,6 +407,12 @@ tr:hover td { background:#fafafa; }
   </div>
 </div>
 
+<!-- ── LOADING OVERLAY ── -->
+<div id="loading-overlay" style="position:fixed;inset:0;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:14px">
+  <div style="width:44px;height:44px;border:4px solid #fde68a;border-top-color:#f59e0b;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="font-size:.9rem;color:#6b7280;font-weight:500">데이터 불러오는 중...</div>
+</div>
+
 <!-- ── PW RESET MODAL ── -->
 <div class="modal-bg" id="pw-modal">
   <div class="modal">
@@ -418,21 +427,64 @@ tr:hover td { background:#fafafa; }
 </div>
 
 <script>
+/* ════════════════ FIREBASE CONFIG ════════════════ */
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBerP5jMTQWBaYd-aKQxIzdvrCdI6qaYIM",
+  authDomain:"taeyang-life.firebaseapp.com",
+  databaseURL:"https://taeyang-life-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"taeyang-life",
+  storageBucket:"taeyang-life.firebasestorage.app",
+  messagingSenderId:"946921208997",
+  appId:"1:946921208997:web:2a853ac77cf4e97b9ba14c"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const db=firebase.database();
+const ROOT='taeyang';
+
 /* ════════════════ DATA ════════════════ */
-const KEYS={M:'ty_members',C:'ty_contracts',P:'ty_paid'};
 const RANKS=['사원','팀장','지사','본부장'];
 const DEFAULT_PW='aha7kim';
-let members=[], contracts=[], paid=new Set();
-let currentUser=null; // {member, isAdmin}
+let members=[], contracts=[], paid=new Set(), admPw=DEFAULT_PW;
+let currentUser=null;
+let _activeTabId=null;
 
-const load=()=>{
-  members  =JSON.parse(localStorage.getItem(KEYS.M)||'[]');
-  contracts=JSON.parse(localStorage.getItem(KEYS.C)||'[]');
-  paid     =new Set(JSON.parse(localStorage.getItem(KEYS.P)||'[]'));
+const saveM=()=>{
+  if(!members.length){db.ref(`${ROOT}/members`).remove();return;}
+  const o={};members.forEach(m=>{o[m.id]=m;});
+  db.ref(`${ROOT}/members`).set(o);
 };
-const saveM=()=>localStorage.setItem(KEYS.M,JSON.stringify(members));
-const saveC=()=>localStorage.setItem(KEYS.C,JSON.stringify(contracts));
-const saveP=()=>localStorage.setItem(KEYS.P,JSON.stringify([...paid]));
+const saveC=()=>{
+  if(!contracts.length){db.ref(`${ROOT}/contracts`).remove();return;}
+  const o={};contracts.forEach(c=>{o[c.id]=c;});
+  db.ref(`${ROOT}/contracts`).set(o);
+};
+const saveP=()=>{
+  if(!paid.size){db.ref(`${ROOT}/paid`).remove();return;}
+  const o={};[...paid].forEach(id=>{o[id]=true;});
+  db.ref(`${ROOT}/paid`).set(o);
+};
+
+function initFirebase(){
+  db.ref(ROOT).on('value',snap=>{
+    const d=snap.val()||{};
+    members  =d.members  ?Object.values(d.members)  :[];
+    contracts=d.contracts?Object.values(d.contracts):[];
+    paid     =new Set(d.paid?Object.keys(d.paid):[]);
+    admPw    =d.config?.adm_pw||DEFAULT_PW;
+    document.getElementById('loading-overlay').style.display='none';
+    // 로그인 상태면 현재 탭 새로고침
+    if(currentUser){
+      if(!currentUser.isAdmin){
+        const updated=byId(currentUser.member.id);
+        if(updated) currentUser.member=updated;
+      }
+      if(_activeTabId){const t=window._tabs?.find(x=>x.id===_activeTabId);if(t?.fn)t.fn();}
+    }
+  },err=>{
+    document.getElementById('loading-overlay').innerHTML=
+      `<div style="text-align:center;padding:24px"><div style="font-size:2rem">⚠️</div><div style="margin-top:10px;color:#ef4444;font-weight:700">Firebase 연결 오류</div><div style="font-size:.82rem;color:#6b7280;margin-top:6px">${err.message}</div></div>`;
+  });
+}
 
 /* ════════════════ UTILS ════════════════ */
 const uid   =()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -550,8 +602,7 @@ function doLogin(){
 
 function doAdminLogin(){
   const pw=document.getElementById('li-adm-pw').value;
-  const saved=localStorage.getItem('ty_pw')||DEFAULT_PW;
-  if(pw!==saved){document.getElementById('li-adm-err').textContent='비밀번호 오류';return;}
+  if(pw!==admPw){document.getElementById('li-adm-err').textContent='비밀번호 오류';return;}
   currentUser={member:null,isAdmin:true};
   showApp();
 }
@@ -613,6 +664,7 @@ function buildTabs(tabs){
 }
 
 function activateTab(id){
+  _activeTabId=id;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   const tabEl=document.getElementById('tab-'+id);
   if(tabEl) tabEl.classList.add('active');
@@ -1148,7 +1200,7 @@ function markWeekPaid(key){
   contracts.forEach(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;if(toStr(getPaySat(jd))===key) paid.add(c.id);});
   saveP();renderAdmWeekly();
 }
-const changeAdmPw=()=>{const v=document.getElementById('new-adm-pw').value;if(v){localStorage.setItem('ty_pw',v);alert('변경 완료');}};
+const changeAdmPw=()=>{const v=document.getElementById('new-adm-pw').value;if(v){db.ref(`${ROOT}/config/adm_pw`).set(v);admPw=v;alert('변경 완료');}};
 
 /* ════════════════ CSV ════════════════ */
 function importCSV(evt){
@@ -1306,7 +1358,7 @@ function clearContracts(){if(!confirm(`계약 ${contracts.length}건을 삭제�
 function clearAll(){if(!confirm('멤버+계약+정산기록을 모두 삭제합니까?')) return;members=[];contracts=[];paid=new Set();saveM();saveC();saveP();renderAdmDash();alert('전체 초기화 완료');}
 
 /* ════════════════ INIT ════════════════ */
-load();
+initFirebase();
 </script>
 </body>
 </html>
