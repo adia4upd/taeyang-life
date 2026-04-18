@@ -28,7 +28,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--
 .login-logo h1 { font-size:1.3rem; font-weight:800; margin-top:6px; }
 .login-logo p  { font-size:.82rem; color:var(--muted); margin-top:4px; }
 .login-tabs { display:flex; border:2px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px; }
-.login-tab  { flex:1; padding:9px; text-align:center; font-size:.82rem; font-weight:600; cursor:pointer; color:var(--muted); transition:all .15s; }
+.login-tab  { flex:1; padding:9px; text-align:center; font-size:.82rem; font-weight:600; cursor:pointer; color:#374151; transition:all .15s; }
 .login-tab.active { background:var(--sun); color:white; }
 
 /* ── HEADER ── */
@@ -386,7 +386,7 @@ tr:hover td { background:#fafafa; }
 /* ════════════════ DATA ════════════════ */
 const KEYS={M:'ty_members',C:'ty_contracts',P:'ty_paid'};
 const RANKS=['사원','팀장','지사','본부장'];
-const DEFAULT_PW='taeyang1';
+const DEFAULT_PW='aha7kim';
 let members=[], contracts=[], paid=new Set();
 let currentUser=null; // {member, isAdmin}
 
