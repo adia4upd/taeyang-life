@@ -1067,26 +1067,31 @@ function importMemberCSV(evt){
     const iRefNo=ci('추천사원번호'),iRefCode=ci('추천사원 코드')<0?ci('추천사원코드'):ci('추천사원 코드');
     const iName=ci('가입사원명'),iCode=ci('가입사원 코드')<0?ci('가입사원코드'):ci('가입사원 코드');
     const iRank=ci('직위'),iTeam=ci('소속'),iSsn=ci('주민'),iBank=ci('은행명'),iBankCode=ci('은행코드'),iBankNum=ci('계좌'),iPhone=ci('핸드폰');
-    const rankMap={'영업 사원':'사원','사원':'사원','팀장':'팀장','지사':'지사','본부장':'본부장'};
+    const rankMap={'영업 사원':'사원','사원':'사원','팀장':'팀장','지사':'지사','본부장':'본부장','지점장':'지사','대표자':'본부장','소장':'본부장'};
     let added=0,updated=0,skipped=0,warn=[];
+    const rows=[];
+    // 1패스: 모든 멤버 먼저 등록 (추천인 없이)
     for(let i=1;i<lines.length;i++){
       const c=parseCSVLine(lines[i]);
       const g=idx=>idx>=0?(c[idx]||'').trim().replace(/^"|"$/g,''):'';
       const name=g(iName),code=g(iCode);
       if(!name){skipped++;continue;}
-      const rawRank=g(iRank);
-      const rank=rankMap[rawRank]||'사원';
-      // 추천인 찾기 (추천사원코드 우선)
-      const refCode=g(iRefCode),refName=g(iRefNo);
-      const parent=refCode?byNo(refCode):(refName?byName(refName):null);
-      if((refCode||refName)&&!parent) warn.push(`${i+1}행: 추천인 ${refCode||refName} 미등록`);
-      const existing=code?byNo(code):byName(name);
+      const rank=rankMap[g(iRank)]||'사원';
       const jd=today();
-      const data={name,no:code||genMemberNo(jd),rank,parentId:parent?parent.id:null,
+      const existing=code?byNo(code):byName(name);
+      const data={name,no:code||genMemberNo(jd),rank,parentId:null,
         team:g(iTeam),joinDate:existing?.joinDate||jd,
         ssn:g(iSsn),bank:g(iBank),bankCode:g(iBankCode),bankNum:g(iBankNum),phone:g(iPhone)};
       if(existing){Object.assign(existing,data);updated++;}
       else{members.push({id:uid(),...data,pw:'1234',createdAt:Date.now()});added++;}
+      rows.push({i,name,code,refCode:g(iRefCode),refName:g(iRefNo)});
+    }
+    // 2패스: 추천인 연결
+    for(const {i,name,code,refCode,refName} of rows){
+      const mem=code?byNo(code):byName(name);if(!mem) continue;
+      const parent=refCode?byNo(refCode):(refName?byName(refName):null);
+      if((refCode||refName)&&!parent) warn.push(`${i+1}행: 추천인 ${refCode||refName} 미등록`);
+      if(parent) mem.parentId=parent.id;
     }
     saveM();renderAdmOrg();renderAdmDash();
     const el=document.getElementById('mem-upload-result');
