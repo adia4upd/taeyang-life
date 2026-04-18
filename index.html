@@ -504,8 +504,8 @@ function calcComm(registrantId){
   for(const m of chain){
     let a=0;
     if(m.rank==='본부장'){
-      a+=hasJisa?50000:150000;
-      for(const r of['사원','팀장','지사']) if(!done[r]){a+=AMT[r];done[r]=true;}
+      a+=50000; // 기본 5만원, 없는 직급은 아래서 흡수
+      for(const r of['팀장','지사']) if(!done[r]){a+=AMT[r];done[r]=true;}
     } else {
       const lower={'사원':[],'팀장':['사원'],'지사':['사원','팀장']};
       for(const r of(lower[m.rank]||[])) if(!done[r]){a+=AMT[r];done[r]=true;}
