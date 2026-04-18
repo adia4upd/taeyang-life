@@ -288,7 +288,10 @@ tr:hover td { background:#fafafa; }
   <div id="page-adm-weekly" class="page">
     <div class="flex-between mb-10">
       <span style="font-weight:800">주급 정산</span>
-      <select id="wk-filter" onchange="renderAdmWeekly()" style="width:auto;padding:7px 10px;font-size:.81rem"><option value="">전체 사원</option></select>
+      <div class="flex" style="gap:6px">
+        <select id="wk-filter" onchange="renderAdmWeekly()" style="width:auto;padding:7px 10px;font-size:.81rem"><option value="">전체 사원</option></select>
+        <button class="btn btn-outline btn-sm" onclick="downloadWeeklyCSV()">📥 엑셀 다운로드</button>
+      </div>
     </div>
     <div id="wk-content"></div>
   </div>
@@ -297,7 +300,10 @@ tr:hover td { background:#fafafa; }
   <div id="page-adm-monthly" class="page">
     <div class="flex-between mb-10">
       <span style="font-weight:800">월급 정산</span>
-      <input type="month" id="mon-picker" onchange="renderAdmMonthly()" style="width:auto;padding:7px 10px;font-size:.81rem">
+      <div class="flex" style="gap:6px">
+        <input type="month" id="mon-picker" onchange="renderAdmMonthly()" style="width:auto;padding:7px 10px;font-size:.81rem">
+        <button class="btn btn-outline btn-sm" onclick="downloadMonthlyCSV()">📥 엑셀 다운로드</button>
+      </div>
     </div>
     <div id="mon-content"></div>
   </div>
@@ -933,7 +939,21 @@ function renderAdmWeekly(){
     const rows=g.items.map(c=>{
       const reg=byId(c.registrantId);const comms=calcComm(c.registrantId);const amt=comms[c.registrantId]||0;
       const{status,diff:d2}=getPayInfo(c);
-      return`<div class="row"><div class="flex"><strong>${reg?.name}</strong><span class="txt-m">${c.customerName||''} | ${c.code}</span></div><div class="flex"><span class="amt">${won(amt)}</span><span class="badge badge-${status}">${SLBL[status]||status}${status==='preview'?' D-'+d2:''}</span><button class="btn btn-success btn-xs" onclick="markPaid('${c.id}')">${paid.has(c.id)?'완료':'지급완료'}</button></div></div>`;
+      const bankInfo=reg?.bankNum?`<span class="txt-m">${reg.bank||''} ${reg.bankNum}</span>`:'';
+      const personalInfo=`<span class="txt-m">${reg?.phone||''}</span>${reg?.ssn?`<span class="txt-m"> · ${reg.ssn}</span>`:''}`;
+      return`<div class="row" style="flex-wrap:wrap;gap:4px">
+        <div style="flex:1;min-width:200px">
+          <div class="flex"><strong>${reg?.name}</strong><span class="mem-num">${reg?.no||''}</span></div>
+          <div style="font-size:.76rem;color:#666;margin-top:2px">${reg?.customerName||c.customerName||''} | ${c.code}</div>
+          <div style="font-size:.76rem;color:#888;margin-top:1px">${reg?.phone||''} ${reg?.ssn?'· '+reg.ssn:''}</div>
+          <div style="font-size:.76rem;color:#888">${reg?.bank||''} ${reg?.bankNum||''}</div>
+        </div>
+        <div class="flex" style="align-items:center;gap:6px">
+          <span class="amt">${won(amt)}</span>
+          <span class="badge badge-${status}">${SLBL[status]||status}${status==='preview'?' D-'+d2:''}</span>
+          <button class="btn btn-success btn-xs" onclick="markPaid('${c.id}')">${paid.has(c.id)?'완료':'지급완료'}</button>
+        </div>
+      </div>`;
     }).join('');
     return`<div style="margin-bottom:16px"><div class="wk-hdr"><div>📅 ${fmtFull(g.payDate)}${diff>=0&&diff<=3&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">D-${diff}</span>`:''}${diff<0&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">미지급</span>`:''}${allPaid?`<span style="background:var(--green);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">완료</span>`:''}</div><div><span class="amt">${won(total)}</span> <span class="txt-m">${g.items.length}건</span></div></div>${rows}${!allPaid?`<button class="btn btn-success btn-sm mt-10" onclick="markWeekPaid('${key}')">이 주차 전체 지급완료</button>`:''}</div>`;
   }).join('');
@@ -972,7 +992,15 @@ function renderAdmMonthly(){
       <div style="font-size:.82rem;margin-top:3px"><span style="color:var(--muted)">${payStr}</span> <span style="font-weight:700;color:${stColor}">${stLabel}</span></div>
     </div>
     <div class="flex-between mb-10"><span style="font-weight:700">합계</span><span class="amt" style="font-size:1.1rem">${won(grand)}</span></div>
-    ${rows.length?rows.map(d=>`<div class="row" style="padding:12px 14px"><div class="flex"><span class="badge badge-${d.m.rank}">${d.m.rank}</span><strong>${d.m.name}</strong><span class="mem-num">${d.m.no||''}</span><span class="txt-m">${d.m.team||''}</span></div><div style="text-align:right"><div class="amt">${won(d.total)}</div><div class="txt-m">${d.cnt}건${d.m.bankNum?` | ${d.m.bank||''} ${d.m.bankNum}`:''}</div></div></div>`).join(''):'<div class="empty">데이터 없음</div>'}
+    ${rows.length?rows.map(d=>`<div class="row" style="padding:12px 14px;flex-wrap:wrap;gap:6px">
+      <div style="flex:1;min-width:200px">
+        <div class="flex"><span class="badge badge-${d.m.rank}">${d.m.rank}</span><strong>${d.m.name}</strong><span class="mem-num">${d.m.no||''}</span></div>
+        <div style="font-size:.76rem;color:#666;margin-top:3px">${d.m.team||''}</div>
+        <div style="font-size:.76rem;color:#888;margin-top:1px">${d.m.phone||''} ${d.m.ssn?'· '+d.m.ssn:''}</div>
+        <div style="font-size:.76rem;color:#888">${d.m.bank||''} ${d.m.bankCode?'('+d.m.bankCode+')':''} ${d.m.bankNum||''}</div>
+      </div>
+      <div style="text-align:right"><div class="amt">${won(d.total)}</div><div class="txt-m">${d.cnt}건</div></div>
+    </div>`).join(''):'<div class="empty">데이터 없음</div>'}
   </div>`;
 }
 
@@ -1168,6 +1196,50 @@ function downloadMemberTemplate(){
   const csv=rows.map(r=>r.join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='태양라이프_사원등록양식.csv';a.click();
+}
+
+function downloadWeeklyCSV(){
+  const rows=[['정산일','이름','사원번호','직급','소속','전화번호','주민등록번호','은행명','은행코드','계좌번호','고객명','계약코드','금액','상태']];
+  const SLBL={paid:'완료',preview:'예정',pending:'대기',overdue:'미지급'};
+  let rel=contracts.filter(c=>{const m=byId(c.registrantId);return m&&m.rank==='사원';});
+  const groups={};
+  rel.forEach(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;const ps=toStr(getPaySat(jd));if(!groups[ps]) groups[ps]={payDate:getPaySat(jd),items:[]};groups[ps].items.push(c);});
+  Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([key,g])=>{
+    const dateStr=fmtFull(g.payDate);
+    g.items.forEach(c=>{
+      const reg=byId(c.registrantId);const comms=calcComm(c.registrantId);const amt=comms[c.registrantId]||0;
+      const{status}=getPayInfo(c);
+      rows.push([dateStr,reg?.name||'',reg?.no||'',reg?.rank||'',reg?.team||'',reg?.phone||'',reg?.ssn||'',reg?.bank||'',reg?.bankCode||'',reg?.bankNum||'',c.customerName||'',c.code,Math.floor(amt/10000)+'만원',SLBL[status]||status]);
+    });
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`태양라이프_주급정산_${today()}.csv`;a.click();
+}
+
+function downloadMonthlyCSV(){
+  const picker=document.getElementById('mon-picker');
+  if(!picker.value) return alert('정산 기간을 선택하세요');
+  const[y,mo]=picker.value.split('-').map(Number);
+  const prevM=mo===1?12:mo-1,prevY=mo===1?y-1:y;
+  const payY=mo===12?y+1:y,payM=mo===12?1:mo+1;
+  const payDate=new Date(payY,payM,0);
+  const periodStr=`${prevY}년${prevM}월26일~${y}년${mo}월25일`;
+  const payStr=`${payY}년${payM}월${payDate.getDate()}일`;
+  const data={};
+  contracts.forEach(c=>{
+    const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
+    const{periodKey}=getMonthPeriodInfo(jd);if(periodKey!==picker.value) return;
+    const comms=calcComm(c.registrantId);
+    Object.entries(comms).forEach(([mid,amt])=>{const m=byId(mid);if(!m||m.rank==='사원') return;if(!data[mid]) data[mid]={m,total:0,cnt:0};data[mid].total+=amt;data[mid].cnt++;});
+  });
+  const rows=[['정산기간','지급일','이름','사원번호','직급','소속','전화번호','주민등록번호','은행명','은행코드','계좌번호','건수','금액']];
+  Object.values(data).sort((a,b)=>RANKS.indexOf(b.m.rank)-RANKS.indexOf(a.m.rank)).forEach(d=>{
+    rows.push([periodStr,payStr,d.m.name,d.m.no||'',d.m.rank,d.m.team||'',d.m.phone||'',d.m.ssn||'',d.m.bank||'',d.m.bankCode||'',d.m.bankNum||'',d.cnt,Math.floor(d.total/10000)+'만원']);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`태양라이프_월급정산_${picker.value}.csv`;a.click();
 }
 
 function downloadTemplate(){
