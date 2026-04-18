@@ -873,11 +873,11 @@ function memberCard(s){
 /* ════════════════ ADMIN RENDERS ════════════════ */
 function renderAdmDash(){
   const now=new Date();now.setHours(0,0,0,0);
-  const y=now.getFullYear(),mo=now.getMonth()+1;
+  const curPk=getMonthPeriodInfo(today()).periodKey;
   let monthTotal=0;
   contracts.forEach(c=>{
     const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
-    const dd=new Date(jd+'T00:00:00');if(dd.getFullYear()!==y||dd.getMonth()+1!==mo) return;
+    if(getMonthPeriodInfo(jd).periodKey!==curPk) return;
     monthTotal+=Object.values(calcComm(c.registrantId)).reduce((a,b)=>a+b,0);
   });
   const unpaid=contracts.filter(c=>{const m=byId(c.registrantId);if(!m||m.rank!=='사원') return false;const{status}=getPayInfo(c);return status==='preview'||status==='overdue';});
@@ -899,7 +899,7 @@ function renderAdmDash(){
   const mData={};
   contracts.forEach(c=>{
     const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;
-    const dd=new Date(jd+'T00:00:00');if(dd.getFullYear()!==y||dd.getMonth()+1!==mo) return;
+    if(getMonthPeriodInfo(jd).periodKey!==curPk) return;
     if(!mData[c.registrantId]) mData[c.registrantId]={cnt:0};mData[c.registrantId].cnt++;
   });
   const top5=Object.entries(mData).sort((a,b)=>b[1].cnt-a[1].cnt).slice(0,5);
