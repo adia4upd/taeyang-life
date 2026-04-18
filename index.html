@@ -339,7 +339,7 @@ tr:hover td { background:#fafafa; }
     </div>
     <div class="form-row">
       <div class="form-group"><label>사원번호</label><input type="text" id="em-num" placeholder="자동생성"><div class="form-hint">비워두면 자동생성</div></div>
-      <div class="form-group"><label>초기 비밀번호 *</label><input type="password" id="em-pw" placeholder="로그인용 비밀번호"></div>
+      <div class="form-group"><label>초기 비밀번호</label><input type="password" id="em-pw" placeholder="기본값: 1234"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>핸드폰</label><input type="text" id="em-phone" placeholder="010-0000-0000"></div>
@@ -926,7 +926,7 @@ function saveMember(){
   const data={name,no,rank:document.getElementById('em-rank').value,parentId:document.getElementById('em-parent').value||null,team:document.getElementById('em-team').value.trim(),joinDate:jd,
     phone:document.getElementById('em-phone').value.trim(),ssn:document.getElementById('em-ssn').value.trim(),
     bank:document.getElementById('em-bank').value.trim(),bankCode:document.getElementById('em-bank-code').value.trim(),bankNum:document.getElementById('em-bank-num').value.trim()};
-  if(pw) data.pw=pw;
+  data.pw=pw||'1234';
   if(id){const idx=members.findIndex(m=>m.id===id);members[idx]={...members[idx],...data};}
   else members.push({id:uid(),...data,createdAt:Date.now()});
   saveM();closeMod('mem-modal');renderAdmOrg();
@@ -1062,7 +1062,7 @@ function importMemberCSV(evt){
         team:g(iTeam),joinDate:existing?.joinDate||jd,
         ssn:g(iSsn),bank:g(iBank),bankCode:g(iBankCode),bankNum:g(iBankNum),phone:g(iPhone)};
       if(existing){Object.assign(existing,data);updated++;}
-      else{members.push({id:uid(),...data,createdAt:Date.now()});added++;}
+      else{members.push({id:uid(),...data,pw:'1234',createdAt:Date.now()});added++;}
     }
     saveM();renderAdmOrg();renderAdmDash();
     const el=document.getElementById('mem-upload-result');
