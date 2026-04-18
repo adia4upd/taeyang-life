@@ -244,7 +244,7 @@ tr:hover td { background:#fafafa; }
     <div class="card">
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>사원번호</th><th>이름</th><th>직급</th><th>추천인</th><th>소속</th><th>가입일</th><th>누적계약</th><th>승격조건</th><th>비번</th><th></th></tr></thead>
+          <thead><tr><th>사원번호</th><th>이름</th><th>직급</th><th>추천인</th><th>소속</th><th>계좌정보</th><th>가입일</th><th>누적계약</th><th>승격조건</th><th>비번</th><th></th></tr></thead>
           <tbody id="adm-mem-tbody"></tbody>
         </table>
       </div>
@@ -335,6 +335,11 @@ tr:hover td { background:#fafafa; }
       <div class="form-group"><label>사원번호</label><input type="text" id="em-num" placeholder="자동생성"><div class="form-hint">비워두면 자동생성</div></div>
       <div class="form-group"><label>초기 비밀번호 *</label><input type="password" id="em-pw" placeholder="로그인용 비밀번호"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>은행명</label><input type="text" id="em-bank" placeholder="국민은행"></div>
+      <div class="form-group"><label>예금주</label><input type="text" id="em-bank-holder" placeholder="홍길동"></div>
+    </div>
+    <div class="form-group"><label>계좌번호</label><input type="text" id="em-bank-num" placeholder="123-456-789012"></div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeMod('mem-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveMember()">저장</button>
@@ -791,7 +796,7 @@ function renderAdmDash(){
 
 function renderAdmOrg(){
   const tbody=document.getElementById('adm-mem-tbody');
-  if(!members.length){tbody.innerHTML='<tr><td colspan="10"><div class="empty">멤버 없음</div></td></tr>';return;}
+  if(!members.length){tbody.innerHTML='<tr><td colspan="11"><div class="empty">멤버 없음</div></td></tr>';return;}
   tbody.innerHTML=members.map(m=>{
     const parent=byId(m.parentId);
     const mc=contracts.filter(c=>c.registrantId===m.id).length;
@@ -804,7 +809,9 @@ function renderAdmOrg(){
       <td><strong>${m.name}</strong></td>
       <td><span class="badge badge-${m.rank}">${m.rank}</span></td>
       <td>${parent?`<span class="badge badge-${parent.rank}" style="margin-right:3px">${parent.rank}</span>${parent.name}`:'-'}</td>
-      <td>${m.team||'-'}</td><td>${fmtDate(m.joinDate)}</td><td>${mc}건</td><td>${promo}</td>
+      <td>${m.team||'-'}</td>
+      <td>${m.bank?`<span style="font-size:.78rem">${m.bank}<br><strong>${m.bankNum||'-'}</strong><br>${m.bankHolder||''}</span>`:'<span class="txt-m">-</span>'}</td>
+      <td>${fmtDate(m.joinDate)}</td><td>${mc}건</td><td>${promo}</td>
       <td>${m.pw?'<span style="color:var(--green)">설정됨</span>':'<span style="color:var(--red)">미설정</span>'}</td>
       <td><div class="flex">
         <button class="btn btn-outline btn-xs" onclick="openMemModal('${m.id}')">편집</button>
@@ -885,10 +892,12 @@ function openMemModal(id){
     document.getElementById('em-rank').value=m.rank;document.getElementById('em-parent').value=m.parentId||'';
     document.getElementById('em-team').value=m.team||'';document.getElementById('em-date').value=m.joinDate||'';
     document.getElementById('em-num').value=m.no||'';document.getElementById('em-pw').value='';
+    document.getElementById('em-bank').value=m.bank||'';document.getElementById('em-bank-holder').value=m.bankHolder||'';document.getElementById('em-bank-num').value=m.bankNum||'';
   } else {
     document.getElementById('mem-modal-title').textContent='멤버 추가';
     ['em-id','em-name','em-team','em-num','em-pw'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('em-rank').value='사원';document.getElementById('em-parent').value='';
+    ['em-bank','em-bank-holder','em-bank-num'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('em-date').value=today();
   }
   document.getElementById('mem-modal').classList.add('open');
@@ -902,7 +911,8 @@ function saveMember(){
   let no=document.getElementById('em-num').value.trim();
   if(!no) no=genMemberNo(jd);
   const pw=document.getElementById('em-pw').value;
-  const data={name,no,rank:document.getElementById('em-rank').value,parentId:document.getElementById('em-parent').value||null,team:document.getElementById('em-team').value.trim(),joinDate:jd};
+  const data={name,no,rank:document.getElementById('em-rank').value,parentId:document.getElementById('em-parent').value||null,team:document.getElementById('em-team').value.trim(),joinDate:jd,
+    bank:document.getElementById('em-bank').value.trim(),bankHolder:document.getElementById('em-bank-holder').value.trim(),bankNum:document.getElementById('em-bank-num').value.trim()};
   if(pw) data.pw=pw;
   if(id){const idx=members.findIndex(m=>m.id===id);members[idx]={...members[idx],...data};}
   else members.push({id:uid(),...data,createdAt:Date.now()});
