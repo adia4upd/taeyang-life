@@ -654,7 +654,7 @@ function renderMyPage(){
         if(!groups[ps]) groups[ps]={payDate:getPaySat(jd),items:[]};
         groups[ps].items.push(c);
       });
-      const SLBL={paid:'✅ 완료',preview:'⏰ 예정',pending:'⏳ 대기',overdue:'🔴 연체'};
+      const SLBL={paid:'✅ 완료',preview:'⏰ 예정',pending:'⏳ 대기',overdue:'🔴 미지급'};
       html+=Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([key,g])=>{
         const diff=Math.floor((g.payDate-now)/86400000);
         const allPaid=g.items.every(c=>paid.has(c.id));
@@ -846,7 +846,7 @@ function renderAdmDash(){
   document.getElementById('adm-unpaid').innerHTML=unpaid.length?unpaid.slice(0,6).map(c=>{
     const reg=byId(c.registrantId);const comms=calcComm(c.registrantId);const amt=comms[c.registrantId]||0;
     const{status,diff}=getPayInfo(c);
-    return`<div class="row"><div><strong>${reg?.name}</strong><br><span class="txt-m">${c.code}</span></div><div style="text-align:right"><span class="amt">${won(amt)}</span><br><span class="badge badge-${status}">${status==='overdue'?'연체':'D-'+diff}</span></div></div>`;
+    return`<div class="row"><div><strong>${reg?.name}</strong><br><span class="txt-m">${c.code}</span></div><div style="text-align:right"><span class="amt">${won(amt)}</span><br><span class="badge badge-${status}">${status==='overdue'?'미지급':'D-'+diff}</span></div></div>`;
   }).join(''):'<div class="empty">미지급 없음 ✅</div>';
   document.getElementById('adm-rank-breakdown').innerHTML=RANKS.map(r=>{
     const cnt=members.filter(m=>m.rank===r).length;
@@ -898,7 +898,7 @@ function renderAdmContracts(){
   const tbody=document.getElementById('adm-con-tbody');
   const sorted=[...contracts].sort((a,b)=>(b.joinDate||'').localeCompare(a.joinDate||''));
   if(!sorted.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty">계약 없음</div></td></tr>';return;}
-  const SLBL={paid:'✅완료',preview:'⏰예정',pending:'⏳대기',overdue:'🔴연체',error:'오류'};
+  const SLBL={paid:'✅완료',preview:'⏰예정',pending:'⏳대기',overdue:'🔴미지급',error:'오류'};
   tbody.innerHTML=sorted.map(c=>{
     const reg=byId(c.registrantId);
     const d=c.joinDate||parseContractDate(c.code);
@@ -925,7 +925,7 @@ function renderAdmWeekly(){
   const groups={};
   rel.forEach(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return;const ps=toStr(getPaySat(jd));if(!groups[ps]) groups[ps]={payDate:getPaySat(jd),items:[]};groups[ps].items.push(c);});
   const now=new Date();now.setHours(0,0,0,0);
-  const SLBL={paid:'✅완료',preview:'⏰예정',pending:'⏳대기',overdue:'🔴연체'};
+  const SLBL={paid:'✅완료',preview:'⏰예정',pending:'⏳대기',overdue:'🔴미지급'};
   document.getElementById('wk-content').innerHTML=Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([key,g])=>{
     const diff=Math.floor((g.payDate-now)/86400000);
     const allPaid=g.items.every(c=>paid.has(c.id));
@@ -935,7 +935,7 @@ function renderAdmWeekly(){
       const{status,diff:d2}=getPayInfo(c);
       return`<div class="row"><div class="flex"><strong>${reg?.name}</strong><span class="txt-m">${c.customerName||''} | ${c.code}</span></div><div class="flex"><span class="amt">${won(amt)}</span><span class="badge badge-${status}">${SLBL[status]||status}${status==='preview'?' D-'+d2:''}</span><button class="btn btn-success btn-xs" onclick="markPaid('${c.id}')">${paid.has(c.id)?'완료':'지급완료'}</button></div></div>`;
     }).join('');
-    return`<div style="margin-bottom:16px"><div class="wk-hdr"><div>📅 ${fmtFull(g.payDate)}${diff>=0&&diff<=3&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">D-${diff}</span>`:''}${diff<0&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">연체</span>`:''}${allPaid?`<span style="background:var(--green);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">완료</span>`:''}</div><div><span class="amt">${won(total)}</span> <span class="txt-m">${g.items.length}건</span></div></div>${rows}${!allPaid?`<button class="btn btn-success btn-sm mt-10" onclick="markWeekPaid('${key}')">이 주차 전체 지급완료</button>`:''}</div>`;
+    return`<div style="margin-bottom:16px"><div class="wk-hdr"><div>📅 ${fmtFull(g.payDate)}${diff>=0&&diff<=3&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">D-${diff}</span>`:''}${diff<0&&!allPaid?`<span style="background:var(--red);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">미지급</span>`:''}${allPaid?`<span style="background:var(--green);color:white;padding:2px 6px;border-radius:8px;font-size:.68rem;margin-left:6px">완료</span>`:''}</div><div><span class="amt">${won(total)}</span> <span class="txt-m">${g.items.length}건</span></div></div>${rows}${!allPaid?`<button class="btn btn-success btn-sm mt-10" onclick="markWeekPaid('${key}')">이 주차 전체 지급완료</button>`:''}</div>`;
   }).join('');
 }
 
