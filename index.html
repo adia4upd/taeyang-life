@@ -705,15 +705,15 @@ function renderMyPage(){
     });
     html+=`</div>`;
 
-    // 이번달 실적 요약
-    html+=`<div class="card"><div class="card-title-lg">📋 이번달 실적 요약</div>`;
-    const thisMonthCons=contracts.filter(c=>{
-      const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-      const dd=new Date(jd+'T00:00:00');return dd.getFullYear()===y&&dd.getMonth()+1===mo;
-    });
+    // 이번달 실적 요약 (정산기간 기준)
+    const curPk=getMonthPeriodInfo(today()).periodKey;
+    html+=`<div class="card"><div class="card-title-lg">📋 이번 기간 실적 요약</div>`;
     const myDownline=getDownline(m.id);
     const myIds=new Set([m.id,...myDownline.map(x=>x.id)]);
-    const rel=thisMonthCons.filter(c=>myIds.has(c.registrantId));
+    const rel=contracts.filter(c=>{
+      const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
+      return getMonthPeriodInfo(jd).periodKey===curPk&&myIds.has(c.registrantId);
+    });
     html+=rel.length?rel.slice(0,5).map(c=>{
       const reg=byId(c.registrantId);const jd=c.joinDate||parseContractDate(c.code);
       return`<div class="row"><div class="flex"><span class="badge badge-${reg?.rank||'사원'}">${reg?.rank||'?'}</span><strong>${reg?.name||'-'}</strong><span class="txt-m">→ ${c.customerName||''}</span></div><span class="txt-m">${fmtDate(jd)}</span></div>`;
@@ -760,7 +760,7 @@ function renderTeamPage(){
     // 직속 사원들
     const mySawen=members.filter(x=>x.parentId===m.id&&x.rank==='사원');
     html+=`<div class="section-hdr green">👥 내 팀 사원 현황 (${mySawen.length}명)</div>`;
-    html+=mySawen.length?mySawen.map(s=>memberCard(s,y,mo)).join(''):'<div class="empty">소속 사원 없음</div>';
+    html+=mySawen.length?mySawen.map(s=>memberCard(s)).join(''):'<div class="empty">소속 사원 없음</div>';
 
   } else if(m.rank==='지사'){
     // 직속 팀장들
@@ -768,65 +768,85 @@ function renderTeamPage(){
     html+=`<div class="section-hdr gold">🏅 소속 팀장 현황 (${myTeamLeaders.length}명)</div>`;
     html+=myTeamLeaders.length?myTeamLeaders.map(tl=>{
       const tlSawen=members.filter(x=>x.parentId===tl.id&&x.rank==='사원');
+      const tlCurPk=getMonthPeriodInfo(today()).periodKey;
       const tlCons=contracts.filter(c=>{
         const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-        const dd=new Date(jd+'T00:00:00');
-        return dd.getFullYear()===y&&dd.getMonth()+1===mo&&(c.registrantId===tl.id||tlSawen.some(s=>s.id===c.registrantId));
+        return getMonthPeriodInfo(jd).periodKey===tlCurPk&&(c.registrantId===tl.id||tlSawen.some(s=>s.id===c.registrantId));
       });
       let tlComm=0; tlCons.forEach(c=>{const comms=calcComm(c.registrantId);tlComm+=(comms[tl.id]||0);});
-      let subsect=tlSawen.length?`<div style="margin-left:16px;margin-top:8px">`+tlSawen.map(s=>memberCard(s,y,mo)).join('')+`</div>`:'';
-      return`<div class="card"><div class="flex-between mb-10"><div class="flex"><span class="badge badge-팀장">팀장</span><strong>${tl.name}</strong><span class="mem-num">${tl.no||''}</span></div><div style="text-align:right"><span class="amt">${won(tlComm)}</span><span class="txt-m" style="margin-left:6px">이번달</span></div></div>${subsect}</div>`;
+      let subsect=tlSawen.length?`<div style="margin-left:16px;margin-top:8px">`+tlSawen.map(s=>memberCard(s)).join('')+`</div>`:'';
+      return`<div class="card"><div class="flex-between mb-10"><div class="flex"><span class="badge badge-팀장">팀장</span><strong>${tl.name}</strong><span class="mem-num">${tl.no||''}</span></div><div style="text-align:right"><span class="amt">${won(tlComm)}</span><span class="txt-m" style="margin-left:6px">이번 기간</span></div></div>${subsect}</div>`;
     }).join(''):'<div class="empty">소속 팀장 없음</div>';
 
     // 직속 사원들도
     const dirSawen=members.filter(x=>x.parentId===m.id&&x.rank==='사원');
     if(dirSawen.length){
       html+=`<div class="section-hdr green" style="margin-top:12px">👤 직속 사원 (${dirSawen.length}명)</div>`;
-      html+=dirSawen.map(s=>memberCard(s,y,mo)).join('');
+      html+=dirSawen.map(s=>memberCard(s)).join('');
     }
 
   } else if(m.rank==='본부장'){
-    // 직속 지사들
-    const myJisa=members.filter(x=>x.parentId===m.id&&x.rank==='지사');
-    html+=`<div class="section-hdr red">🏢 소속 지사 현황 (${myJisa.length}명)</div>`;
-    html+=myJisa.length?myJisa.map(jisa=>{
-      const jisaDownline=getDownline(jisa.id);
-      const allIds=[jisa.id,...jisaDownline.map(x=>x.id)];
-      const jisaCons=contracts.filter(c=>{
-        const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-        const dd=new Date(jd+'T00:00:00');
-        return dd.getFullYear()===y&&dd.getMonth()+1===mo&&allIds.includes(c.registrantId);
-      });
-      let jisaComm=0; jisaCons.forEach(c=>{const comms=calcComm(c.registrantId);jisaComm+=(comms[jisa.id]||0);});
-      const tls=members.filter(x=>x.parentId===jisa.id&&x.rank==='팀장');
-      return`<div class="card"><div class="flex-between mb-10"><div class="flex"><span class="badge badge-지사">지사</span><strong>${jisa.name}</strong><span class="mem-num">${jisa.no||''}</span></div><div style="text-align:right"><span class="amt">${won(jisaComm)}</span><span class="txt-m" style="margin-left:6px">이번달 | 팀장 ${tls.length}명 | 사원 ${getDownlineByRank(jisa.id,'사원').length}명</span></div></div></div>`;
-    }).join(''):'<div class="empty">소속 지사 없음</div>';
-
-    // 전체 사원 수/계약 수
     const allDown=getDownline(m.id);
     const downIds=new Set([m.id,...allDown.map(x=>x.id)]);
-    const moCons=contracts.filter(c=>{
-      const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-      const dd=new Date(jd+'T00:00:00');
-      return dd.getFullYear()===y&&dd.getMonth()+1===mo&&downIds.has(c.registrantId);
-    });
-    let moTotal=0; moCons.forEach(c=>{moTotal+=Object.values(calcComm(c.registrantId)).reduce((a,b)=>a+b,0);});
+    // 현재 정산기간 계약 (26~25일 기준)
+    const curPeriod=getMonthPeriodInfo(today()).periodKey;
+    const periodCons=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPeriod&&downIds.has(c.registrantId);});
+    let periodTotal=0; periodCons.forEach(c=>{periodTotal+=Object.values(calcComm(c.registrantId)).reduce((a,b)=>a+b,0);});
+
+    const myJisa=members.filter(x=>x.parentId===m.id&&x.rank==='지사');
+    const myTL=members.filter(x=>x.parentId===m.id&&x.rank==='팀장');
+    const mySawen=members.filter(x=>x.parentId===m.id&&x.rank==='사원');
+
     html=`<div class="stats">
       <div class="stat"><div class="n">${myJisa.length}</div><div class="l">소속 지사</div></div>
       <div class="stat"><div class="n">${allDown.filter(x=>x.rank==='팀장').length}</div><div class="l">소속 팀장</div></div>
       <div class="stat"><div class="n">${allDown.filter(x=>x.rank==='사원').length}</div><div class="l">소속 사원</div></div>
-      <div class="stat"><div class="n" style="color:var(--sun-d)">${won(moTotal)}</div><div class="l">이번달 총 정산</div></div>
-    </div>`+html;
+      <div class="stat"><div class="n" style="color:var(--sun-d)">${won(periodTotal)}</div><div class="l">이번 기간 총 정산</div></div>
+    </div>`;
+
+    // 직속 지사
+    if(myJisa.length){
+      html+=`<div class="section-hdr red">🏢 소속 지사 (${myJisa.length}명)</div>`;
+      html+=myJisa.map(jisa=>{
+        const jisaDown=getDownline(jisa.id);
+        const allIds=[jisa.id,...jisaDown.map(x=>x.id)];
+        const jisaCons=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPeriod&&allIds.includes(c.registrantId);});
+        let jisaComm=0; jisaCons.forEach(c=>{const comms=calcComm(c.registrantId);jisaComm+=(comms[jisa.id]||0);});
+        const tls=members.filter(x=>x.parentId===jisa.id&&x.rank==='팀장');
+        return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-지사">지사</span><strong>${jisa.name}</strong><span class="mem-num">${jisa.no||''}</span></div><div style="text-align:right"><span class="amt">${won(jisaComm)}</span><div class="txt-m">팀장 ${tls.length}명 | 사원 ${jisaDown.filter(x=>x.rank==='사원').length}명</div></div></div></div>`;
+      }).join('');
+    }
+
+    // 직속 팀장
+    if(myTL.length){
+      html+=`<div class="section-hdr gold" style="margin-top:12px">🏅 직속 팀장 (${myTL.length}명)</div>`;
+      html+=myTL.map(tl=>{
+        const tlSawen=members.filter(x=>x.parentId===tl.id&&x.rank==='사원');
+        const tlCons=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPeriod&&(c.registrantId===tl.id||tlSawen.some(s=>s.id===c.registrantId));});
+        let tlComm=0; tlCons.forEach(c=>{const comms=calcComm(c.registrantId);tlComm+=(comms[tl.id]||0);});
+        return`<div class="card"><div class="flex-between"><div class="flex"><span class="badge badge-팀장">팀장</span><strong>${tl.name}</strong><span class="mem-num">${tl.no||''}</span></div><div style="text-align:right"><span class="amt">${won(tlComm)}</span><div class="txt-m">사원 ${tlSawen.length}명</div></div></div></div>`;
+      }).join('');
+    }
+
+    // 직속 사원
+    if(mySawen.length){
+      html+=`<div class="section-hdr green" style="margin-top:12px">👤 직속 사원 (${mySawen.length}명)</div>`;
+      html+=mySawen.map(s=>memberCard(s)).join('');
+    }
+
+    if(!myJisa.length&&!myTL.length&&!mySawen.length){
+      html+='<div class="empty">하위 조직 없음</div>';
+    }
   }
 
   document.getElementById('team-content').innerHTML=html;
 }
 
-function memberCard(s,y,mo){
+function memberCard(s){
+  const curPk=getMonthPeriodInfo(today()).periodKey;
   const sCons=contracts.filter(c=>{
     const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-    const dd=new Date(jd+'T00:00:00');
-    return dd.getFullYear()===y&&dd.getMonth()+1===mo&&c.registrantId===s.id;
+    return getMonthPeriodInfo(jd).periodKey===curPk&&c.registrantId===s.id;
   });
   const unpaid=contracts.filter(c=>{
     if(c.registrantId!==s.id) return false;
