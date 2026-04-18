@@ -722,14 +722,28 @@ function renderMyPage(){
   }
 
   html+=`<div class="card">
-    <div class="card-title">🔑 비밀번호 변경</div>
-    <div class="form-group"><label>현재 비밀번호</label><input type="password" id="my-pw-cur" placeholder="현재 비밀번호"></div>
-    <div class="form-group"><label>새 비밀번호</label><input type="password" id="my-pw-new" placeholder="새 비밀번호"></div>
-    <div class="form-group"><label>새 비밀번호 확인</label><input type="password" id="my-pw-cfm" placeholder="다시 입력"></div>
-    <p id="my-pw-msg" style="font-size:.8rem;min-height:18px;margin-bottom:6px"></p>
-    <button class="btn btn-primary btn-full" onclick="changeMyPw()">비밀번호 변경</button>
+    <div class="flex-between" onclick="togglePwSection()" style="cursor:pointer;user-select:none">
+      <div class="card-title" style="margin:0">🔑 비밀번호 변경</div>
+      <span id="my-pw-arrow" style="font-size:.85rem;color:var(--muted)">▼ 펼치기</span>
+    </div>
+    <div id="my-pw-section" style="display:none;margin-top:14px">
+      <div class="form-group"><label>현재 비밀번호</label><input type="password" id="my-pw-cur" placeholder="현재 비밀번호"></div>
+      <div class="form-group"><label>새 비밀번호</label><input type="password" id="my-pw-new" placeholder="새 비밀번호"></div>
+      <div class="form-group"><label>새 비밀번호 확인</label><input type="password" id="my-pw-cfm" placeholder="다시 입력"></div>
+      <p id="my-pw-msg" style="font-size:.8rem;min-height:18px;margin-bottom:6px"></p>
+      <button class="btn btn-primary btn-full" onclick="changeMyPw()">비밀번호 변경</button>
+    </div>
   </div>`;
   document.getElementById('my-content').innerHTML=html;
+}
+
+function togglePwSection(){
+  const sec=document.getElementById('my-pw-section');
+  const arrow=document.getElementById('my-pw-arrow');
+  if(!sec) return;
+  const open=sec.style.display==='none';
+  sec.style.display=open?'block':'none';
+  arrow.textContent=open?'▲ 접기':'▼ 펼치기';
 }
 
 function changeMyPw(){
