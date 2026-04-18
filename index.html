@@ -309,13 +309,29 @@ tr:hover td { background:#fafafa; }
       <div class="flex"><input type="password" id="new-adm-pw" placeholder="새 비밀번호"><button class="btn btn-primary btn-sm" onclick="changeAdmPw()">변경</button></div>
     </div>
     <div class="card">
-      <div class="card-title">🗄 데이터 관리</div>
+      <div class="card-title">💾 백업 / 복원</div>
       <div class="flex">
-        <button class="btn btn-outline btn-sm" onclick="exportData()">💾 백업</button>
+        <button class="btn btn-outline btn-sm" onclick="exportData()">💾 전체 백업</button>
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('imp-file').click()">📂 복원</button>
-        <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 전체삭제</button>
       </div>
       <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="card">
+      <div class="card-title">🗑 데이터 삭제</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="flex-between" style="padding:10px 12px;background:#faf9f7;border-radius:8px;border:1px solid #eee">
+          <div><div style="font-weight:700;font-size:.88rem">멤버 삭제</div><div class="txt-m">등록된 구성원 전체 삭제 (계약은 유지)</div></div>
+          <button class="btn btn-danger btn-sm" onclick="clearMembers()">삭제</button>
+        </div>
+        <div class="flex-between" style="padding:10px 12px;background:#faf9f7;border-radius:8px;border:1px solid #eee">
+          <div><div style="font-weight:700;font-size:.88rem">계약 삭제</div><div class="txt-m">업로드된 계약 데이터 전체 삭제 (멤버는 유지)</div></div>
+          <button class="btn btn-danger btn-sm" onclick="clearContracts()">삭제</button>
+        </div>
+        <div class="flex-between" style="padding:10px 12px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca">
+          <div><div style="font-weight:700;font-size:.88rem">전체 초기화</div><div class="txt-m">멤버 + 계약 + 정산기록 모두 삭제</div></div>
+          <button class="btn btn-danger btn-sm" onclick="clearAll()">전체 삭제</button>
+        </div>
+      </div>
     </div>
   </div>
 </div><!-- /content -->
@@ -1127,7 +1143,9 @@ function parseCSVLine(line){const r=[];let cur='',inQ=false;for(const ch of line
 
 function exportData(){const blob=new Blob([JSON.stringify({members,contracts,paid:[...paid],at:new Date().toISOString()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`taeyang-${today()}.json`;a.click();}
 function importData(evt){const file=evt.target.files[0];if(!file) return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!confirm(`덮어씌웁니다.\n멤버:${d.members?.length||0} 계약:${d.contracts?.length||0}`)) return;members=d.members||[];contracts=d.contracts||[];paid=new Set(d.paid||[]);saveM();saveC();saveP();renderAdmDash();alert('완료');}catch(err){alert('파일 오류: '+err.message);}};r.readAsText(file);evt.target.value='';}
-function clearAll(){if(!confirm('모든 데이터를 삭제합니까?')) return;members=[];contracts=[];paid=new Set();saveM();saveC();saveP();renderAdmDash();alert('삭제 완료');}
+function clearMembers(){if(!confirm(`멤버 ${members.length}명을 삭제합니까?\n계약 데이터는 유지됩니다.`)) return;members=[];saveM();renderAdmOrg();renderAdmDash();alert('멤버 삭제 완료');}
+function clearContracts(){if(!confirm(`계약 ${contracts.length}건을 삭제합니까?\n멤버 데이터는 유지됩니다.`)) return;contracts=[];paid=new Set();saveC();saveP();renderAdmContracts();renderAdmDash();alert('계약 삭제 완료');}
+function clearAll(){if(!confirm('멤버+계약+정산기록을 모두 삭제합니까?')) return;members=[];contracts=[];paid=new Set();saveM();saveC();saveP();renderAdmDash();alert('전체 초기화 완료');}
 
 /* ════════════════ INIT ════════════════ */
 load();
