@@ -239,12 +239,18 @@ tr:hover td { background:#fafafa; }
   <div id="page-adm-org" class="page">
     <div class="flex-between mb-10">
       <span style="font-weight:800">조직 구성원</span>
-      <button class="btn btn-primary btn-sm" onclick="openMemModal()">+ 멤버 추가</button>
+      <div class="flex" style="gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('mem-csv-file').click()">📥 엑셀 일괄등록</button>
+        <input type="file" id="mem-csv-file" accept=".csv" style="display:none" onchange="importMemberCSV(event)">
+        <button class="btn btn-outline btn-sm" onclick="downloadMemberTemplate()">📄 양식 다운로드</button>
+        <button class="btn btn-primary btn-sm" onclick="openMemModal()">+ 멤버 추가</button>
+      </div>
     </div>
+    <div id="mem-upload-result" style="margin-bottom:8px"></div>
     <div class="card">
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>사원번호</th><th>이름</th><th>직급</th><th>추천인</th><th>소속</th><th>계좌정보</th><th>가입일</th><th>누적계약</th><th>승격조건</th><th>비번</th><th></th></tr></thead>
+          <thead><tr><th>사원번호</th><th>이름</th><th>직급</th><th>추천인</th><th>소속</th><th>핸드폰</th><th>계좌정보</th><th>누적계약</th><th>승격조건</th><th>비번</th><th></th></tr></thead>
           <tbody id="adm-mem-tbody"></tbody>
         </table>
       </div>
@@ -336,10 +342,14 @@ tr:hover td { background:#fafafa; }
       <div class="form-group"><label>초기 비밀번호 *</label><input type="password" id="em-pw" placeholder="로그인용 비밀번호"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>은행명</label><input type="text" id="em-bank" placeholder="국민은행"></div>
-      <div class="form-group"><label>예금주</label><input type="text" id="em-bank-holder" placeholder="홍길동"></div>
+      <div class="form-group"><label>핸드폰</label><input type="text" id="em-phone" placeholder="010-0000-0000"></div>
+      <div class="form-group"><label>주민등록번호</label><input type="text" id="em-ssn" placeholder="690810-2067217"></div>
     </div>
-    <div class="form-group"><label>계좌번호</label><input type="text" id="em-bank-num" placeholder="123-456-789012"></div>
+    <div class="form-row">
+      <div class="form-group"><label>은행명</label><input type="text" id="em-bank" placeholder="국민은행"></div>
+      <div class="form-group"><label>은행코드</label><input type="text" id="em-bank-code" placeholder="004"></div>
+    </div>
+    <div class="form-group"><label>계좌번호</label><input type="text" id="em-bank-num" placeholder="7607-01042-93455"></div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeMod('mem-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveMember()">저장</button>
@@ -796,7 +806,7 @@ function renderAdmDash(){
 
 function renderAdmOrg(){
   const tbody=document.getElementById('adm-mem-tbody');
-  if(!members.length){tbody.innerHTML='<tr><td colspan="11"><div class="empty">멤버 없음</div></td></tr>';return;}
+  if(!members.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty">멤버 없음</div></td></tr>';return;}
   tbody.innerHTML=members.map(m=>{
     const parent=byId(m.parentId);
     const mc=contracts.filter(c=>c.registrantId===m.id).length;
@@ -810,8 +820,9 @@ function renderAdmOrg(){
       <td><span class="badge badge-${m.rank}">${m.rank}</span></td>
       <td>${parent?`<span class="badge badge-${parent.rank}" style="margin-right:3px">${parent.rank}</span>${parent.name}`:'-'}</td>
       <td>${m.team||'-'}</td>
-      <td>${m.bank?`<span style="font-size:.78rem">${m.bank}<br><strong>${m.bankNum||'-'}</strong><br>${m.bankHolder||''}</span>`:'<span class="txt-m">-</span>'}</td>
-      <td>${fmtDate(m.joinDate)}</td><td>${mc}건</td><td>${promo}</td>
+      <td style="font-size:.78rem">${m.phone||'-'}</td>
+      <td>${m.bank?`<span style="font-size:.78rem">${m.bank}${m.bankCode?` (${m.bankCode})`:''}<br><strong>${m.bankNum||'-'}</strong></span>`:'<span class="txt-m">-</span>'}</td>
+      <td>${mc}건</td><td>${promo}</td>
       <td>${m.pw?'<span style="color:var(--green)">설정됨</span>':'<span style="color:var(--red)">미설정</span>'}</td>
       <td><div class="flex">
         <button class="btn btn-outline btn-xs" onclick="openMemModal('${m.id}')">편집</button>
@@ -892,12 +903,13 @@ function openMemModal(id){
     document.getElementById('em-rank').value=m.rank;document.getElementById('em-parent').value=m.parentId||'';
     document.getElementById('em-team').value=m.team||'';document.getElementById('em-date').value=m.joinDate||'';
     document.getElementById('em-num').value=m.no||'';document.getElementById('em-pw').value='';
-    document.getElementById('em-bank').value=m.bank||'';document.getElementById('em-bank-holder').value=m.bankHolder||'';document.getElementById('em-bank-num').value=m.bankNum||'';
+    document.getElementById('em-phone').value=m.phone||'';document.getElementById('em-ssn').value=m.ssn||'';
+    document.getElementById('em-bank').value=m.bank||'';document.getElementById('em-bank-code').value=m.bankCode||'';document.getElementById('em-bank-num').value=m.bankNum||'';
   } else {
     document.getElementById('mem-modal-title').textContent='멤버 추가';
     ['em-id','em-name','em-team','em-num','em-pw'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('em-rank').value='사원';document.getElementById('em-parent').value='';
-    ['em-bank','em-bank-holder','em-bank-num'].forEach(i=>document.getElementById(i).value='');
+    ['em-phone','em-ssn','em-bank','em-bank-code','em-bank-num'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('em-date').value=today();
   }
   document.getElementById('mem-modal').classList.add('open');
@@ -912,7 +924,8 @@ function saveMember(){
   if(!no) no=genMemberNo(jd);
   const pw=document.getElementById('em-pw').value;
   const data={name,no,rank:document.getElementById('em-rank').value,parentId:document.getElementById('em-parent').value||null,team:document.getElementById('em-team').value.trim(),joinDate:jd,
-    bank:document.getElementById('em-bank').value.trim(),bankHolder:document.getElementById('em-bank-holder').value.trim(),bankNum:document.getElementById('em-bank-num').value.trim()};
+    phone:document.getElementById('em-phone').value.trim(),ssn:document.getElementById('em-ssn').value.trim(),
+    bank:document.getElementById('em-bank').value.trim(),bankCode:document.getElementById('em-bank-code').value.trim(),bankNum:document.getElementById('em-bank-num').value.trim()};
   if(pw) data.pw=pw;
   if(id){const idx=members.findIndex(m=>m.id===id);members[idx]={...members[idx],...data};}
   else members.push({id:uid(),...data,createdAt:Date.now()});
@@ -1019,6 +1032,56 @@ function importCSV(evt){
   };
   reader.readAsText(file,'UTF-8');evt.target.value='';
 }
+function importMemberCSV(evt){
+  const file=evt.target.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    if(lines.length<2){alert('데이터 없음');return;}
+    const hdr=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    const ci=name=>hdr.findIndex(h=>h.includes(name));
+    const iRefNo=ci('추천사원번호'),iRefCode=ci('추천사원 코드')<0?ci('추천사원코드'):ci('추천사원 코드');
+    const iName=ci('가입사원명'),iCode=ci('가입사원 코드')<0?ci('가입사원코드'):ci('가입사원 코드');
+    const iRank=ci('직위'),iTeam=ci('소속'),iSsn=ci('주민'),iBank=ci('은행명'),iBankCode=ci('은행코드'),iBankNum=ci('계좌'),iPhone=ci('핸드폰');
+    const rankMap={'영업 사원':'사원','사원':'사원','팀장':'팀장','지사':'지사','본부장':'본부장'};
+    let added=0,updated=0,skipped=0,warn=[];
+    for(let i=1;i<lines.length;i++){
+      const c=parseCSVLine(lines[i]);
+      const g=idx=>idx>=0?(c[idx]||'').trim().replace(/^"|"$/g,''):'';
+      const name=g(iName),code=g(iCode);
+      if(!name){skipped++;continue;}
+      const rawRank=g(iRank);
+      const rank=rankMap[rawRank]||'사원';
+      // 추천인 찾기 (추천사원코드 우선)
+      const refCode=g(iRefCode),refName=g(iRefNo);
+      const parent=refCode?byNo(refCode):(refName?byName(refName):null);
+      if((refCode||refName)&&!parent) warn.push(`${i+1}행: 추천인 ${refCode||refName} 미등록`);
+      const existing=code?byNo(code):byName(name);
+      const jd=today();
+      const data={name,no:code||genMemberNo(jd),rank,parentId:parent?parent.id:null,
+        team:g(iTeam),joinDate:existing?.joinDate||jd,
+        ssn:g(iSsn),bank:g(iBank),bankCode:g(iBankCode),bankNum:g(iBankNum),phone:g(iPhone)};
+      if(existing){Object.assign(existing,data);updated++;}
+      else{members.push({id:uid(),...data,createdAt:Date.now()});added++;}
+    }
+    saveM();renderAdmOrg();renderAdmDash();
+    const el=document.getElementById('mem-upload-result');
+    const wHtml=warn.length?`<br><span style="color:var(--red);font-size:.76rem">⚠️ ${warn.join('<br>')}</span>`:'';
+    if(el) el.innerHTML=`<div class="alert alert-ok">✅ 신규 ${added}명 추가, ${updated}명 업데이트, ${skipped}건 건너뜀${wHtml}</div>`;
+  };
+  reader.readAsText(file,'UTF-8');evt.target.value='';
+}
+
+function downloadMemberTemplate(){
+  const rows=[
+    ['추천사원번호','추천사원 코드','가입사원명','가입사원 코드','직위','소속','주민등록번호','은행명','은행코드','계좌번호','핸드폰'],
+    ['김요셉','TYS250920001','임난경','TYS251025005','영업 사원','플라이','690810-2067217','국민은행','004','7607-01042-93455','010-2208-7362'],
+  ];
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='태양라이프_사원등록양식.csv';a.click();
+}
+
 function downloadTemplate(){
   const rows=[
     ['모집인','모집인번호','고객명','계약코드','소속'],
