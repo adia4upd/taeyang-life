@@ -762,20 +762,24 @@ function renderMyPage(){
     });
     html+=`</div>`;
 
-    // 이번달 실적 요약 (정산기간 기준)
-    const curPk=getMonthPeriodInfo(today()).periodKey;
-    html+=`<div class="card"><div class="card-title-lg">📋 이번 기간 실적 요약</div>`;
+    // 최근 실적 요약 — 현재 기간 우선, 없으면 가장 최근 데이터 기간
     const myDownline=getDownline(m.id);
     const myIds=new Set([m.id,...myDownline.map(x=>x.id)]);
-    const rel=contracts.filter(c=>{
-      const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;
-      return getMonthPeriodInfo(jd).periodKey===curPk&&myIds.has(c.registrantId);
-    });
+    const curPk=getMonthPeriodInfo(today()).periodKey;
+    let relPk=curPk;
+    let rel=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===curPk&&myIds.has(c.registrantId);});
+    if(!rel.length){
+      // 가장 최근 실적 기간 찾기
+      const allPks=[...new Set(contracts.filter(c=>myIds.has(c.registrantId)).map(c=>{const jd=c.joinDate||parseContractDate(c.code);return jd?getMonthPeriodInfo(jd).periodKey:null;}).filter(Boolean))].sort().reverse();
+      if(allPks.length){relPk=allPks[0];rel=contracts.filter(c=>{const jd=c.joinDate||parseContractDate(c.code);if(!jd) return false;return getMonthPeriodInfo(jd).periodKey===relPk&&myIds.has(c.registrantId);});}
+    }
+    const pkLabel=relPk===curPk?'이번 기간':'최근 실적 ('+relPk+')';
+    html+=`<div class="card"><div class="card-title-lg">📋 ${pkLabel} 요약</div>`;
     html+=rel.length?rel.slice(0,5).map(c=>{
       const reg=byId(c.registrantId);const jd=c.joinDate||parseContractDate(c.code);
       return`<div class="row"><div class="flex"><span class="badge badge-${reg?.rank||'사원'}">${reg?.rank||'?'}</span><strong>${reg?.name||'-'}</strong><span class="txt-m">→ ${c.customerName||''}</span></div><span class="txt-m">${fmtDate(jd)}</span></div>`;
     }).join('')+(rel.length>5?`<div class="txt-m" style="text-align:center;padding:6px">총 ${rel.length}건</div>`:'')+`</div>`
-    :'<div class="empty">이번달 실적 없음</div></div>';
+    :'<div class="empty">실적 없음</div></div>';
   }
 
   html+=`<div class="card">
