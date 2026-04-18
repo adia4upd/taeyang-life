@@ -858,7 +858,7 @@ function renderAdmOrg(){
       <td><span class="mem-num">${m.no||'-'}</span></td>
       <td><strong>${m.name}</strong></td>
       <td><span class="badge badge-${m.rank}">${m.rank}</span></td>
-      <td>${parent?`<span class="badge badge-${parent.rank}" style="margin-right:3px">${parent.rank}</span>${parent.name}`:'-'}</td>
+      <td>${m.parentId==='__BONSA__'?'<span class="badge" style="background:#6b7280;color:white;margin-right:3px">본사</span>본사':parent?`<span class="badge badge-${parent.rank}" style="margin-right:3px">${parent.rank}</span>${parent.name}`:'-'}</td>
       <td>${m.team||'-'}</td>
       <td style="font-size:.78rem">${m.phone||'-'}</td>
       <td>${m.bank?`<span style="font-size:.78rem">${m.bank}${m.bankCode?` (${m.bankCode})`:''}<br><strong>${m.bankNum||'-'}</strong></span>`:'<span class="txt-m">-</span>'}</td>
@@ -936,7 +936,7 @@ function renderAdmMonthly(){
 
 /* ════════════════ MODALS ════════════════ */
 function openMemModal(id){
-  document.getElementById('em-parent').innerHTML='<option value="">없음</option>'+members.filter(m=>m.id!==id).map(m=>`<option value="${m.id}">${m.name}(${m.rank})</option>`).join('');
+  document.getElementById('em-parent').innerHTML='<option value="">없음</option><option value="__BONSA__">본사</option>'+members.filter(m=>m.id!==id).map(m=>`<option value="${m.id}">${m.name}(${m.rank})</option>`).join('');
   if(id){
     const m=byId(id);document.getElementById('mem-modal-title').textContent='멤버 편집';
     document.getElementById('em-id').value=id;document.getElementById('em-name').value=m.name;
@@ -1105,6 +1105,7 @@ function importMemberCSV(evt){
     // 2패스: 추천인 연결
     for(const {i,name,code,refCode,refName} of rows){
       const mem=code?byNo(code):byName(name);if(!mem) continue;
+      if(refName==='본사'||refCode==='본사'){mem.parentId='__BONSA__';continue;}
       const parent=refCode?byNo(refCode):(refName?byName(refName):null);
       if((refCode||refName)&&!parent) warn.push(`${i+1}행: 추천인 ${refCode||refName} 미등록`);
       if(parent) mem.parentId=parent.id;
